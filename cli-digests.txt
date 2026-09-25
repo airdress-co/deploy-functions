@@ -1,0 +1,16 @@
+# The airdress CLI releases this Action will run, and their SHA-256 digests.
+#
+# install-cli.sh checks the downloaded binary against the line here, and
+# nothing else: never against the manifest.json served beside the binary,
+# because whoever could replace the binary could replace that too. A version
+# or platform with no line here is refused.
+#
+# Each digest was taken by downloading the binary and hashing it, not copied
+# from the server's manifest.
+#
+# <cli version> <platform> <sha256>
+v0.1.0-alpha.23 linux-amd64   29c6062b559f8eefb9b6fc375c69d4d9341c27f2c32b3c8adf9457451043f3df
+v0.1.0-alpha.23 linux-arm64   a5b693e043576b4e9c686ac10e3ae49eeefa9bba8d8084a0d3db0c2d74ce438d
+v0.1.0-alpha.23 darwin-amd64  d69ab6bc47cfc5b04d31c99cb71dc505f5b5ea56c1351bb7399954a1404edccc
+v0.1.0-alpha.23 darwin-arm64  04eef8fd56fa3b7230549df9e6183a492241a747986189ed6bdd9ff704b047d4
+v0.1.0-alpha.23 windows-amd64 7b6bf1cf51a08efcb5ee1a3b115609d21d04337743c30e16eb5484d106f6eaed

@@ -1,0 +1,3 @@
+config:
+  # Long lines are prose and URLs.
+  MD013: false

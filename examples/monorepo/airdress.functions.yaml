@@ -1,0 +1,18 @@
+# Which directories are functions, which manifest each deploys with, and
+# where. `airdress fn layout-schema` prints this file's JSON Schema.
+layout: 1
+# The default operator for entries that name none: https://<fqdn>, or the
+# FQDN alone (it looks like <uuid>.a.airdr.es).
+operator: https://prod.operator.example
+functions:
+  # Manifest at functions/relay/function.yaml, default operator.
+  - path: functions/relay
+  # One directory, two deployments: the same source, a manifest (grant,
+  # config, signers) and an operator each. Every (manifest, operator) pair
+  # appears once.
+  - path: functions/digest
+    manifest: deploy/prod/digest.yaml
+    operator: https://prod.operator.example
+  - path: functions/digest
+    manifest: deploy/staging/digest.yaml
+    operator: https://staging.operator.example

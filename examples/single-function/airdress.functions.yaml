@@ -1,0 +1,9 @@
+# Which directories are functions, and where each one deploys.
+# `airdress fn layout-schema` prints this file's JSON Schema.
+layout: 1
+# Your operator: https://<fqdn>, or the FQDN alone (it looks like
+# <uuid>.a.airdr.es). The workflow's `operator` input is used when this
+# is left out.
+operator: https://operator.example
+functions:
+  - path: hello

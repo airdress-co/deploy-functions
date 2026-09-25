@@ -1,0 +1,48 @@
+# Deploy the functions a push to main changed, to every operator the map
+# file names. Copy this file into your repository's .github/workflows/ and
+# see the README for the one-time setup.
+name: deploy functions
+
+on:
+  push:
+    branches: [main]
+    paths: ["functions/**", "airdress.functions.yaml"]
+  workflow_dispatch:
+    inputs:
+      all:
+        description: Deploy every function, changed or not
+        type: boolean
+        default: false
+
+concurrency:
+  group: airdress-functions-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # A human gate: add required reviewers to this environment (Settings →
+    # Environments), and keep the three secrets in it rather than in the
+    # repository, so no other job can read them.
+    environment: functions
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      # Better: pin to the full commit SHA of a release you have read.
+      - id: deploy
+        uses: airdress-co/deploy-functions@v1
+        with:
+          machine-key: ${{ secrets.AIRDRESS_MACHINE_KEY }}
+          machine-enrollment: ${{ secrets.AIRDRESS_MACHINE_ENROLLMENT }}
+          signing-key: ${{ secrets.AIRDRESS_FUNCTION_SIGNING_KEY }}
+          signer-machine: ${{ vars.AIRDRESS_SIGNER_MACHINE }}
+          all: ${{ inputs.all || false }}
+      - name: What was deployed
+        if: always()
+        env:
+          DEPLOYED: ${{ steps.deploy.outputs.deployed }}
+        run: echo "$DEPLOYED" | jq .

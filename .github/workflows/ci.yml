@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit:
+    name: Pre-commit (prek)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install prek 0.5.2
+        run: |
+          set -euo pipefail
+          base=https://github.com/j178/prek/releases/download/v0.5.2
+          asset=prek-x86_64-unknown-linux-gnu.tar.gz
+          curl -fsSL -o "$RUNNER_TEMP/$asset" "$base/$asset"
+          echo "a4d51a463cb15ee2929368cc4884eec4ef33dce3ff5101b40e8ad7e1205b8f40  $RUNNER_TEMP/$asset" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$asset" -C "$RUNNER_TEMP"
+          sudo install -m 0755 "$RUNNER_TEMP/prek-x86_64-unknown-linux-gnu/prek" /usr/local/bin/prek
+          prek --version
+      - run: prek run --all-files --show-diff-on-failure
+
+  test:
+    name: Test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: shellcheck
+        run: shellcheck --version && shellcheck -x scripts/*.sh tests/*.sh
+
+      - name: actionlint
+        run: |
+          set -euo pipefail
+          base=https://github.com/rhysd/actionlint/releases/download/v1.7.12
+          asset=actionlint_1.7.12_linux_amd64.tar.gz
+          curl -fsSL -o "$RUNNER_TEMP/$asset" "$base/$asset"
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/$asset" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$asset" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" .github/workflows/*.yml examples/*/.github/workflows/*.yml
+
+      - name: Write-back (commit, pull-request, off) against throwaway repositories
+        run: bash tests/commit-write-back.test.sh
+
+      - name: Install and secrets
+        run: bash tests/install-and-secrets.test.sh
+
+      # The Action itself, end to end, on the single-function example: a plan
+      # with no operator to answer it. It must install and verify the CLI,
+      # write the secrets, and get every function as far as its first
+      # request, then fail there.
+      - name: Prepare the single-function example as a repository
+        id: fixture
+        run: |
+          set -euo pipefail
+          repo="$RUNNER_TEMP/example"
+          git init --quiet --bare --initial-branch=main "$RUNNER_TEMP/origin.git"
+          cp -R examples/single-function "$repo"
+          git -C "$repo" init --quiet --initial-branch=main
+          git -C "$repo" add -A
+          git -C "$repo" -c user.name=ci -c user.email=ci@example.invalid commit --quiet -m example
+          git -C "$repo" remote add origin "$RUNNER_TEMP/origin.git"
+          git -C "$repo" push --quiet origin main
+          key="$(head -c 32 /dev/urandom | base64 | tr '+/' '-_' | tr -d '=\n')"
+          seed="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+          echo "::add-mask::$key"
+          echo "::add-mask::$seed"
+          {
+            echo "repo=$repo"
+            echo "machine-key=$key"
+            echo "signing-key=$seed"
+          } >>"$GITHUB_OUTPUT"
+
+      - name: Run the Action (plan, no operator)
+        id: action
+        continue-on-error: true
+        uses: ./
+        with:
+          working-directory: ${{ steps.fixture.outputs.repo }}
+          machine-key: ${{ steps.fixture.outputs.machine-key }}
+          machine-enrollment: '{"operator":"https://operator.example","machine_id":"0b7e3c1a-5d2f-4c1e-9a07-3f6b2d8e4c10","kid":"k-ci"}'
+          signing-key: ${{ steps.fixture.outputs.signing-key }}
+          branch: main
+          all: "true"
+          plan: "true"
+
+      - name: The Action stopped where it should
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          DEPLOYED: ${{ steps.action.outputs.deployed }}
+          REPO: ${{ steps.fixture.outputs.repo }}
+        run: |
+          set -euo pipefail
+          echo "$DEPLOYED" | jq .
+          [ "$OUTCOME" = failure ] || { echo "a plan with no operator cannot succeed, yet: $OUTCOME"; exit 1; }
+          [ "$(echo "$DEPLOYED" | jq -r '[.[].function] | join(" ")')" = hello ] || { echo "wrong functions"; exit 1; }
+          if echo "$DEPLOYED" | jq -e 'any(.[]; .outcome == "layout_invalid" or .outcome == "signer_not_this_client" or .outcome == "signer_unavailable")' >/dev/null; then
+            echo "stopped before the operator"; exit 1
+          fi
+          [ -z "$(git -C "$REPO" status --porcelain)" ] || { echo "a plan changed the checkout"; exit 1; }
+          if ls "$RUNNER_TEMP"/airdress-secrets.* >/dev/null 2>&1; then
+            echo "the secret files were not removed"; exit 1
+          fi
+
+      # The CLI the Action installed is on PATH from here on.
+      - name: Plan runs of both examples through the scripts
+        run: bash tests/examples.test.sh

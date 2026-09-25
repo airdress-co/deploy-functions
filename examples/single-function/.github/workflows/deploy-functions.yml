@@ -1,0 +1,39 @@
+# Deploy the functions a push to main changed. Copy this file into your
+# repository's .github/workflows/ and see the README for the one-time setup.
+name: deploy functions
+
+on:
+  push:
+    branches: [main]
+    paths: ["hello/**", "airdress.functions.yaml"]
+  # A full redeploy, by hand.
+  workflow_dispatch:
+    inputs:
+      all:
+        description: Deploy every function, changed or not
+        type: boolean
+        default: false
+
+# One deploy at a time per branch, and never cancel one halfway.
+concurrency:
+  group: airdress-functions-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      # Better: pin to the full commit SHA of a release you have read.
+      - uses: airdress-co/deploy-functions@v1
+        with:
+          machine-key: ${{ secrets.AIRDRESS_MACHINE_KEY }}
+          machine-enrollment: ${{ secrets.AIRDRESS_MACHINE_ENROLLMENT }}
+          signing-key: ${{ secrets.AIRDRESS_FUNCTION_SIGNING_KEY }}
+          signer-machine: ${{ vars.AIRDRESS_SIGNER_MACHINE }}
+          all: ${{ inputs.all || false }}

@@ -1,0 +1,20 @@
+# The digest function's staging deployment. Its source is functions/digest;
+# this manifest lives apart from it because the same directory deploys
+# twice (see airdress.functions.yaml).
+apiVersion: airdress.co/v1alpha1
+kind: Function
+metadata:
+  name: digest
+spec:
+  runtime: js-source/v1
+  source:
+    version: "sha256:3c5e7a9b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1c3e5b7d9f1a3c5e7b9d1f3a5c"
+    signers:
+      - key: "5c1e8a7b3f2d4e6c9a0b1d3f5e7c9a2b4d6f8e0a1c3e5a7b9d1f3e5c7a9ba07b"
+      - machine: "0b7e3c1a-5d2f-4c1e-9a07-3f6b2d8e4c10"
+  capabilities:
+    log: {}
+  config:
+    - name: label
+      value: "staging"
+  enabled: true

@@ -1,0 +1,148 @@
+name: Deploy Airdress functions
+description: Publish and promote the functions that changed, signed by this repository's CI key.
+author: Airdress
+branding:
+  icon: upload-cloud
+  color: gray-dark
+
+inputs:
+  operator:
+    description: >-
+      The operator to deploy to, `https://<fqdn>` or the FQDN. Optional when
+      the map file names one for every function.
+    required: false
+    default: ""
+  map:
+    description: The map file, relative to the working directory. Without one, function directories are discovered.
+    required: false
+    default: airdress.functions.yaml
+  machine-key:
+    description: The CI machine's key, as `airdress-operator machine enroll` wrote it. Pass a secret.
+    required: true
+  machine-enrollment:
+    description: The machine's enrollment record, the `<key>.json` written beside the key. Pass a secret.
+    required: true
+  signing-key:
+    description: The Ed25519 source-signing seed (64 hex characters) registered as this machine's source key. Pass a secret.
+    required: true
+  signer-machine:
+    description: >-
+      The machine id each manifest lists in `spec.source.signers` as
+      `{ machine: <id> }`. Defaults to the enrolled machine's own id.
+    required: false
+    default: ""
+  write-back:
+    description: "What to do with the served versions written into the manifests: commit, pull-request or off."
+    required: false
+    default: commit
+  base:
+    description: >-
+      Deploy only the functions changed since this commit. Defaults to the
+      push's previous head; with neither, every function is deployed.
+    required: false
+    default: ""
+  all:
+    description: Deploy every function, changed or not.
+    required: false
+    default: "false"
+  plan:
+    description: Check and dry-run only; publish, promote and write nothing.
+    required: false
+    default: "false"
+  branch:
+    description: The branch whose head decides each base version, and that write-back commits to. Defaults to the triggering branch.
+    required: false
+    default: ""
+  working-directory:
+    description: The repository checkout to deploy from, when it is not the workspace root.
+    required: false
+    default: "."
+  token:
+    description: The token that opens the pull request in `pull-request` mode.
+    required: false
+    default: ${{ github.token }}
+  cli-version:
+    description: The airdress CLI release to run. It must have a line in this Action's cli-digests.txt.
+    required: false
+    default: v0.1.0-alpha.23
+
+outputs:
+  deployed:
+    description: "JSON: [{function, operator, previous, version, outcome}], one object per function."
+    value: ${{ steps.deploy.outputs.deployed }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install the airdress CLI
+      shell: bash
+      env:
+        CLI_VERSION: ${{ inputs.cli-version }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: '"$ACTION_PATH/scripts/install-cli.sh"'
+
+    - name: Write the secrets to private files
+      id: secrets
+      shell: bash
+      env:
+        MACHINE_KEY: ${{ inputs.machine-key }}
+        MACHINE_ENROLLMENT: ${{ inputs.machine-enrollment }}
+        SIGNING_KEY: ${{ inputs.signing-key }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: '"$ACTION_PATH/scripts/write-secrets.sh"'
+
+    - name: Deploy
+      id: deploy
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        MACHINE_KEY_FILE: ${{ steps.secrets.outputs.machine-key }}
+        SIGNING_KEY_FILE: ${{ steps.secrets.outputs.signing-key }}
+        OPERATOR: ${{ inputs.operator }}
+        MAP: ${{ inputs.map }}
+        SIGNER_MACHINE: ${{ inputs.signer-machine }}
+        BRANCH: ${{ inputs.branch }}
+        BASE: ${{ inputs.base || github.event.before }}
+        ALL: ${{ inputs.all }}
+        PLAN: ${{ inputs.plan }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: '"$ACTION_PATH/scripts/deploy.sh"'
+
+    - name: Write the job summary
+      if: always() && steps.deploy.outcome == 'success'
+      shell: bash
+      env:
+        RESULT: ${{ steps.deploy.outputs.result }}
+        PLAN: ${{ inputs.plan }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: '"$ACTION_PATH/scripts/summary.sh"'
+
+    # Runs whatever the summary did: a served version must reach git.
+    - name: Commit the served versions
+      if: always() && steps.deploy.outcome == 'success'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        MODE: ${{ inputs.write-back }}
+        RESULT: ${{ steps.deploy.outputs.result }}
+        BRANCH: ${{ inputs.branch }}
+        GH_TOKEN: ${{ inputs.token }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: '"$ACTION_PATH/scripts/commit-write-back.sh"'
+
+    - name: Fail when a function did not deploy
+      shell: bash
+      env:
+        CODE: ${{ steps.deploy.outputs.exit-code }}
+      run: |
+        if [ "$CODE" != 0 ]; then
+          echo "::error title=airdress deploy::a function did not deploy; the summary and the log above say which and why"
+          exit 1
+        fi
+
+    - name: Remove the secret files
+      if: always() && steps.secrets.outputs.dir != ''
+      shell: bash
+      env:
+        DIR: ${{ steps.secrets.outputs.dir }}
+      run: rm -rf -- "$DIR"

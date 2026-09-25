@@ -1,0 +1,12 @@
+{
+  "apiVersion": "airdress.function/v1",
+  "id": "example.hello",
+  "name": "Answer a request",
+  "version": "0.1.0",
+  "entry": "src/main.ts",
+  "runtime": "js-source/v1",
+  "minHost": "airdress.function-host/1.0",
+  "description": "Answers every request with a greeting and the path it was asked for.",
+  "capabilities": [{ "name": "airdress:fn/log@0.1.0" }],
+  "triggers": [{ "type": "http", "path": "/" }]
+}

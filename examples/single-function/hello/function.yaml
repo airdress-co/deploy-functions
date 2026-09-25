@@ -1,0 +1,23 @@
+# The owner's Function manifest: what this function is granted, and who may
+# sign its source. It is never published or signed itself. CI changes one
+# line of it, spec.source.version, after each deploy.
+apiVersion: airdress.co/v1alpha1
+kind: Function
+metadata:
+  name: hello
+spec:
+  runtime: js-source/v1
+  source:
+    # The version serving now, and the base of the next deploy.
+    version: "sha256:9f2c4e1b7a3d5f60c8e2b4a6d1f3e5c7a9b0d2f4e6a8c0b2d4f6e8a0c2e4a6b8"
+    signers:
+      # The owner's workstation key (`airdress fn keygen` prints it).
+      - key: "5c1e8a7b3f2d4e6c9a0b1d3f5e7c9a2b4d6f8e0a1c3e5a7b9d1f3e5c7a9ba07b"
+      # The CI machine, signing with its registered source key.
+      - machine: "0b7e3c1a-5d2f-4c1e-9a07-3f6b2d8e4c10"
+  capabilities:
+    log: {}
+  config:
+    - name: greeting
+      value: "hello"
+  enabled: true

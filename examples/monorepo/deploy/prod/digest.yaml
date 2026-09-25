@@ -1,0 +1,20 @@
+# The digest function's prod deployment. Its source is functions/digest;
+# this manifest lives apart from it because the same directory deploys
+# twice (see airdress.functions.yaml).
+apiVersion: airdress.co/v1alpha1
+kind: Function
+metadata:
+  name: digest
+spec:
+  runtime: js-source/v1
+  source:
+    version: "sha256:2b4d6f8a0c2e4a6c8e0a2c4e6a8c0e2a4b6d8f0a2c4e6a8c0e2b4d6f8a0c2e4a"
+    signers:
+      - key: "5c1e8a7b3f2d4e6c9a0b1d3f5e7c9a2b4d6f8e0a1c3e5a7b9d1f3e5c7a9ba07b"
+      - machine: "0b7e3c1a-5d2f-4c1e-9a07-3f6b2d8e4c10"
+  capabilities:
+    log: {}
+  config:
+    - name: label
+      value: "prod"
+  enabled: true
