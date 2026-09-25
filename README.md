@@ -322,10 +322,14 @@ deploying from their editor. The CLI says who deployed B and when, and
 the run stops. **It is never retried**, because deploying A's successor on
 top of B would silently undo B.
 
-The fix is a person's: bring that change into git. Commit the tree that
-was deployed as B, and set `spec.source.version` in `function.yaml` to B.
-The next run publishes that same tree, gets B back, and has nothing to
-promote. Deploying from an editor that works inside this repository's
+The fix is a person's: bring that change into git. To keep B, commit the
+tree that was deployed as B and set `spec.source.version` in
+`function.yaml` to B: the next run publishes that same tree, gets B back,
+and has nothing to promote. To put your change on top of B, set only the
+version to B and commit: the next run publishes your tree based on B. A
+commit that changes only `spec.source.version` selects its function (CLI
+`v0.1.0-alpha.24` and later), so either commit deploys without a manual
+dispatch. Deploying from an editor that works inside this repository's
 checkout keeps the two aligned on its own, because it writes the manifest
 line back too.
 
@@ -404,7 +408,8 @@ functions:
   those functions within the grant and signer set the owner applied, and
   cannot widen either.
 - **Pin this Action by commit SHA**, as in the workflow above, and read a
-  release before you move to it.
+  release before you move to it. The tags are `v1.x.y` (fixed) and `v1`
+  (moved to each compatible release); the examples use `v1` for brevity.
 - The secrets are written to `0600` files in a private directory under
   the runner's temporary directory, masked in the log, passed to the CLI
   as file paths (never as arguments), and removed at the end of the job.
