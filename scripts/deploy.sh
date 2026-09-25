@@ -72,6 +72,10 @@ if jq -e 'type == "array"' "$result" >/dev/null 2>&1; then
   deployed="$(jq -c '[.[] | {function, operator, previous, version, outcome}]' "$result")"
   jq -r '.[] | "\(.function) on \(.operator): \(.outcome)" +
     (if .message then " — \(.message)" else "" end) +
+    ((.refusal.locations // []) | map("\n  \(.path)" +
+      (if .line then ":\(.line)" + (if .column then ":\(.column)" else "" end) else "" end))
+      | join("")) +
+    ((.refusal.denials // []) | map("\n  \(.grantPath): \(.capability) (\(.detail))") | join("")) +
     ((.notes // []) | map("\n  " + .) | join(""))' "$result"
 else
   echo "::error title=airdress deploy::the CLI exited $code and printed no result; its reason is in the log above"
