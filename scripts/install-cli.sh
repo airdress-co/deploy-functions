@@ -7,7 +7,7 @@
 # binary is ever run.
 #
 # Environment:
-#   CLI_VERSION          the release to install, e.g. v0.1.0-alpha.23
+#   CLI_VERSION          the release to install, e.g. v0.1.0-alpha.24
 #   ACTION_PATH          this Action's checkout (GITHUB_ACTION_PATH)
 #   RUNNER_OS, RUNNER_ARCH, RUNNER_TEMP, GITHUB_PATH   set by the runner
 #   AIRDRESS_CLI_BASE_URL  optional; where releases are served from. The

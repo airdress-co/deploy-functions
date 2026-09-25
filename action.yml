@@ -64,7 +64,7 @@ inputs:
   cli-version:
     description: The airdress CLI release to run. It must have a line in this Action's cli-digests.txt.
     required: false
-    default: v0.1.0-alpha.23
+    default: v0.1.0-alpha.24
 
 outputs:
   deployed:
