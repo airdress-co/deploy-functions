@@ -6,6 +6,7 @@
   "entry": "src/main.ts",
   "runtime": "js-source/v1",
   "minHost": "airdress.function-host/1.0",
+  "sdk": "1.0.0",
   "description": "Answers with a short digest of what it was sent.",
   "capabilities": [{ "name": "airdress:fn/log@0.1.0" }],
   "triggers": [{ "type": "http", "path": "/" }]
