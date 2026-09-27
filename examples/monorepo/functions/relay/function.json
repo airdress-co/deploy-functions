@@ -6,6 +6,7 @@
   "entry": "src/main.ts",
   "runtime": "js-source/v1",
   "minHost": "airdress.function-host/1.0",
+  "sdk": "1.0.0",
   "description": "POSTs the inbound body to the configured target and answers with the upstream status.",
   "capabilities": [{ "name": "airdress:fn/http@0.1.0" }],
   "triggers": [{ "type": "http", "path": "/" }]

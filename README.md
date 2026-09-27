@@ -359,6 +359,28 @@ functions/relay/
 Only `function.json` and the regular files under `src/` are published.
 A symbolic link under `src/` is refused.
 
+### Code shared between functions
+
+A function's tree is exactly `function.json` and `src/`: an import that
+leaves `src/` is refused, and nothing is fetched from a package registry.
+So code two functions share is one of two things:
+
+- **The Airdress Functions SDK.** Import `@airdress/functions/<module>`
+  (`config`, `http`, `kv`, `log`, `events`, `geo`, `time`, `schedule`, …)
+  and pin the version in `function.json` (`"sdk": "1.0.0"`). The operator
+  serves the library compiled in, and its digest is part of the
+  function's version, so an operator upgrade never changes what a
+  deployed version runs. Its types come from the operator
+  (`airdress fn sdk pull`), never from npm; the `@airdress` npm scope is
+  deliberately empty.
+- **A copy.** A helper of your own is copied into each function's `src/`
+  that uses it. It is duplicated on purpose: each function's version
+  covers every byte it runs, so a change to the helper is a change to
+  each function that carries it, deployed and rolled back with it.
+
+The examples use the library (`examples/*/…/src/main.ts`), and the
+monorepo's `digest` keeps a helper only it uses in `src/format.ts`.
+
 **Without a map file**, every directory holding a `function.json` whose
 `runtime` is `js-source/v1` together with a `function.yaml` is a function
 (`.git` and `node_modules` are skipped); a directory with no
